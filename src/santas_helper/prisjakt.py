@@ -1,7 +1,6 @@
 """Prisjakt API client for price comparison."""
 
-import requests
-from typing import List, Dict, Optional
+from typing import List, Dict
 from urllib.parse import quote
 
 
@@ -10,13 +9,6 @@ class PrisjaktClient:
     
     BASE_URL = "https://www.prisjakt.nu"
     SEARCH_URL = f"{BASE_URL}/search"
-    
-    def __init__(self):
-        """Initialize the Prisjakt client."""
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (compatible; SantasHelper/0.1.0)'
-        })
     
     def search_product(self, query: str) -> str:
         """Search for a product and return the search results URL.

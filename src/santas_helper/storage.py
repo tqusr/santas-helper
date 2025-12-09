@@ -1,6 +1,5 @@
 """Storage management for person wishlists using YAML files."""
 
-import os
 import yaml
 from pathlib import Path
 from typing import List, Optional
@@ -27,10 +26,17 @@ class StorageManager:
             
         Returns:
             Path to the YAML file
+            
+        Raises:
+            ValueError: If person_name is empty or contains only special characters
         """
         # Sanitize filename
         safe_name = "".join(c for c in person_name if c.isalnum() or c in (' ', '-', '_')).strip()
         safe_name = safe_name.replace(' ', '_')
+        
+        if not safe_name:
+            raise ValueError(f"Invalid person name: '{person_name}' cannot be used as filename")
+        
         return self.storage_dir / f"{safe_name}.yaml"
     
     def save_person(self, person: Person) -> None:
@@ -50,16 +56,22 @@ class StorageManager:
             person_name: Name of the person
             
         Returns:
-            Person object or None if not found
+            Person object or None if not found or file is corrupted
         """
         filepath = self._get_filepath(person_name)
         if not filepath.exists():
             return None
         
-        with open(filepath, 'r') as f:
-            data = yaml.safe_load(f)
-        
-        return Person.from_dict(data)
+        try:
+            with open(filepath, 'r') as f:
+                data = yaml.safe_load(f)
+            
+            if not data or 'name' not in data:
+                return None
+                
+            return Person.from_dict(data)
+        except (yaml.YAMLError, KeyError, ValueError):
+            return None
     
     def list_people(self) -> List[str]:
         """List all people with wishlists.
@@ -69,9 +81,14 @@ class StorageManager:
         """
         people = []
         for filepath in self.storage_dir.glob("*.yaml"):
-            with open(filepath, 'r') as f:
-                data = yaml.safe_load(f)
-                people.append(data['name'])
+            try:
+                with open(filepath, 'r') as f:
+                    data = yaml.safe_load(f)
+                if data and 'name' in data:
+                    people.append(data['name'])
+            except (yaml.YAMLError, KeyError, OSError):
+                # Skip corrupted or unreadable files
+                continue
         return sorted(people)
     
     def delete_person(self, person_name: str) -> bool:
